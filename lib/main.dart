@@ -35,18 +35,18 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProxyProvider<AuthProvider, DeviceProvider?>(
           create: (_) => null,
           update: (context, auth, previous) {
-            final userId = auth.currentUser?.uid;
-            if (userId == null) return null;
-            if (previous?.userId == userId) return previous;
+            if (!auth.isAuthenticated) return null;
+            final userId = auth.currentUser!.uid;
+            if (previous != null && previous.userId == userId) return previous;
             return DeviceProvider(userId: userId);
           },
         ),
         ChangeNotifierProxyProvider<AuthProvider, ScheduleProvider?>(
           create: (_) => null,
           update: (context, auth, previous) {
-            final userId = auth.currentUser?.uid;
-            if (userId == null) return null;
-            if (previous?.userId == userId) return previous;
+            if (!auth.isAuthenticated) return null;
+            final userId = auth.currentUser!.uid;
+            if (previous != null && previous.userId == userId) return previous;
             return ScheduleProvider(userId: userId);
           },
         ),

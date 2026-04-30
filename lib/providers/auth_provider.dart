@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_home/models/user_model.dart';
@@ -20,13 +21,18 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _initializeAuth() {
-    _firebaseService.authStateChanges().listen((user) {
+    _firebaseService.authStateChanges().listen((user) async {
       if (user != null) {
+        // ✅ Fetch profile from Firestore for consistency
+        final profile = await _firebaseService.getUserProfile(user.uid);
+        
         _currentUser = AppUser(
           uid: user.uid,
-          email: user.email ?? '',
-          displayName: user.displayName ?? 'User',
-          createdAt: DateTime.now(),
+          email: user.email ?? profile?['email'] ?? '',
+          displayName: profile?['displayName'] ?? user.displayName ?? 'User',
+          createdAt: profile?['createdAt'] != null 
+              ? (profile!['createdAt'] as Timestamp).toDate() 
+              : DateTime.now(),
         );
       } else {
         _currentUser = null;

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:smart_home/models/device_model.dart';
@@ -15,8 +16,9 @@ class FirebaseService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseDatabase _database = FirebaseDatabase.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ============ Authentication Services ============
+  // ============ Authentication & User Services ============
 
   /// Sign up with email and password
   Future<User?> signUp({
@@ -28,19 +30,29 @@ class FirebaseService {
       final UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
 
-      // Update display name
+      // Update Firebase Auth display name
       await userCredential.user?.updateDisplayName(displayName);
       await userCredential.user?.reload();
 
-      // Save user data to Realtime Database
-      await _database.ref('users/${userCredential.user!.uid}').set({
+      // ✅ Store user profile in Cloud Firestore
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'email': email,
         'displayName': displayName,
-        'createdAt': DateTime.now().millisecondsSinceEpoch,
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
       return userCredential.user;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get user profile from Firestore
+  Future<Map<String, dynamic>?> getUserProfile(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      return doc.data();
     } catch (e) {
       rethrow;
     }

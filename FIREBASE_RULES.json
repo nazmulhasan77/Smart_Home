@@ -2,28 +2,9 @@
   "rules": {
     "users": {
       "$uid": {
-        ".read": "auth.uid === $uid",
-        ".write": "auth.uid === $uid",
-        
-        "devices": {
-          "$deviceId": {
-            ".read": "auth.uid === $uid",
-            ".write": "auth.uid === $uid",
-            "switches": {
-              "$switchId": {
-                ".read": "auth.uid === $uid",
-                ".write": "auth.uid === $uid"
-              }
-            }
-          }
-        },
-        
-        "schedules": {
-          "$scheduleId": {
-            ".read": "auth.uid === $uid",
-            ".write": "auth.uid === $uid"
-          }
-        }
+        // Strict data isolation: only the owner can read/write their device data
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
       }
     }
   }

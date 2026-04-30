@@ -78,14 +78,21 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           body:
-              deviceProvider == null || deviceProvider.isLoading
+              deviceProvider == null
                   ? const Center(child: CircularProgressIndicator())
-                  : deviceProvider.devices.isEmpty
-                  ? _buildEmptyState()
                   : StreamBuilder<List<Device>>(
                     stream: deviceProvider.getDevicesStream(),
                     builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting &&
+                          deviceProvider.isLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
                       final devices = snapshot.data ?? deviceProvider.devices;
+
+                      if (devices.isEmpty) {
+                        return _buildEmptyState();
+                      }
 
                       return ListView(
                         padding: const EdgeInsets.all(16),
@@ -118,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Icon(
             Icons.home_outlined,
             size: 90,
-            color: Colors.grey.withOpacity(0.5),
+            color: Colors.grey.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           const Text(

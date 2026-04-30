@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:smart_home/models/schedule_model.dart';
-import 'package:smart_home/providers/auth_provider.dart';
 import 'package:smart_home/providers/schedule_provider.dart';
 
 class ScheduleListScreen extends StatelessWidget {
