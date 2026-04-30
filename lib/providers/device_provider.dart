@@ -163,6 +163,4 @@ class DeviceProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
-
-  void setUser(String uid) {}
 }

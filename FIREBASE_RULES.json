@@ -2,7 +2,6 @@
   "rules": {
     "users": {
       "$uid": {
-        // Each user can only read/write their own data
         ".read": "auth.uid === $uid",
         ".write": "auth.uid === $uid",
         

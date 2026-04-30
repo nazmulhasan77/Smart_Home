@@ -9,68 +9,61 @@ class ScheduleListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userId = context.watch<AuthProvider>().currentUser?.uid ?? '';
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Schedules'),
-        centerTitle: true,
-        elevation: 0,
-      ),
-      body: ChangeNotifierProvider(
-        create: (_) => ScheduleProvider(userId: userId),
-        child: Consumer<ScheduleProvider>(
-          builder: (context, scheduleProvider, _) {
-            if (scheduleProvider.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (scheduleProvider.schedules.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.schedule,
-                      size: 80,
-                      color: Colors.grey.withValues(alpha: 0.5),
+    return Consumer<ScheduleProvider?>(
+      builder: (context, scheduleProvider, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Schedules'),
+            centerTitle: true,
+            elevation: 0,
+          ),
+          body:
+              scheduleProvider == null || scheduleProvider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : scheduleProvider.schedules.isEmpty
+                  ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.schedule,
+                          size: 80,
+                          color: Colors.grey.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No schedules yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No schedules yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
+                  )
+                  : StreamBuilder<List<Schedule>>(
+                    stream: scheduleProvider.getSchedulesStream(),
+                    builder: (context, snapshot) {
+                      final schedules =
+                          snapshot.data ?? scheduleProvider.schedules;
 
-            return StreamBuilder<List<Schedule>>(
-              stream: scheduleProvider.getSchedulesStream(),
-              builder: (context, snapshot) {
-                final schedules = snapshot.data ?? scheduleProvider.schedules;
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: schedules.length,
-                  itemBuilder: (context, index) {
-                    return ScheduleCard(schedule: schedules[index]);
-                  },
-                );
-              },
-            );
-          },
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushNamed(context, '/device-selector');
-        },
-        child: const Icon(Icons.add),
-      ),
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: schedules.length,
+                        itemBuilder: (context, index) {
+                          return ScheduleCard(schedule: schedules[index]);
+                        },
+                      );
+                    },
+                  ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              Navigator.pushNamed(context, '/device-selector');
+            },
+            child: const Icon(Icons.add),
+          ),
+        );
+      },
     );
   }
 }

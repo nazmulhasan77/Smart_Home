@@ -5,6 +5,7 @@ import 'package:smart_home/firebase_options.dart';
 
 import 'package:smart_home/providers/auth_provider.dart';
 import 'package:smart_home/providers/device_provider.dart';
+import 'package:smart_home/providers/schedule_provider.dart';
 
 import 'package:smart_home/screens/auth/login_screen.dart';
 import 'package:smart_home/screens/auth/signup_screen.dart';
@@ -31,9 +32,24 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-
-        // ✅ FIXED: no hardcoded UID
-        ChangeNotifierProvider(create: (_) => DeviceProvider(userId: '')),
+        ChangeNotifierProxyProvider<AuthProvider, DeviceProvider?>(
+          create: (_) => null,
+          update: (context, auth, previous) {
+            final userId = auth.currentUser?.uid;
+            if (userId == null) return null;
+            if (previous?.userId == userId) return previous;
+            return DeviceProvider(userId: userId);
+          },
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, ScheduleProvider?>(
+          create: (_) => null,
+          update: (context, auth, previous) {
+            final userId = auth.currentUser?.uid;
+            if (userId == null) return null;
+            if (previous?.userId == userId) return previous;
+            return ScheduleProvider(userId: userId);
+          },
+        ),
       ],
       child: MaterialApp(
         title: 'Smart Home Control',
@@ -49,12 +65,10 @@ class MyApp extends StatelessWidget {
           '/home': (context) => const HomeScreen(),
           '/schedules': (context) => const ScheduleListScreen(),
           '/device-selector': (context) => const DeviceSelectorScreen(),
-
           '/device-detail': (context) {
             final device = ModalRoute.of(context)!.settings.arguments as Device;
             return DeviceDetailScreen(device: device);
           },
-
           '/add-schedule': (context) {
             final args =
                 ModalRoute.of(context)!.settings.arguments
@@ -84,13 +98,6 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (authProvider.isAuthenticated) {
-          final uid = authProvider.currentUser!.uid;
-
-          // ✅ SAFE UID injection
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.read<DeviceProvider>().setUser(uid);
-          });
-
           return const HomeScreen();
         } else {
           return const LoginScreen();

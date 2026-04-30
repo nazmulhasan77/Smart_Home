@@ -174,9 +174,10 @@ class FirebaseService {
       // Delete device
       await _database.ref('users/$userId/devices/$deviceId').remove();
       // Delete associated schedules
-      await _database.ref('users/$userId/schedules').once().then((snapshot) {
-        if (snapshot.snapshot.exists) {
-          final schedules = snapshot.snapshot.value as Map<dynamic, dynamic>;
+      await _database.ref('users/$userId/schedules').once().then((event) {
+        final snapshot = event.snapshot;
+        if (snapshot.exists) {
+          final schedules = snapshot.value as Map<dynamic, dynamic>;
           schedules.forEach((key, value) {
             if (value['deviceId'] == deviceId) {
               _database.ref('users/$userId/schedules/$key').remove();

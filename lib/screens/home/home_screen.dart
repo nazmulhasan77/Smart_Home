@@ -13,20 +13,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-
-    // 🔥 SAFE UID injection (multi-user support)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final auth = context.read<AuthProvider>();
-
-      if (auth.currentUser != null) {
-        context.read<DeviceProvider>().setUser(auth.currentUser!.uid);
-      }
-    });
-  }
-
   void _showAddDeviceDialog() {
     final deviceNameController = TextEditingController();
 
@@ -65,58 +51,62 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final deviceProvider = context.watch<DeviceProvider>();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Smart Home'),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          PopupMenuButton(
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                child: const Text('Schedules'),
-                onTap: () {
-                  Navigator.pushNamed(context, '/schedules');
-                },
-              ),
-              PopupMenuItem(
-                child: const Text('Logout'),
-                onTap: () {
-                  context.read<AuthProvider>().signOut();
-                },
+    return Consumer<DeviceProvider?>(
+      builder: (context, deviceProvider, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Smart Home'),
+            centerTitle: true,
+            elevation: 0,
+            actions: [
+              PopupMenuButton(
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    child: const Text('Schedules'),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/schedules');
+                    },
+                  ),
+                  PopupMenuItem(
+                    child: const Text('Logout'),
+                    onTap: () {
+                      context.read<AuthProvider>().signOut();
+                    },
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+          body:
+              deviceProvider == null || deviceProvider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : deviceProvider.devices.isEmpty
+                  ? _buildEmptyState()
+                  : StreamBuilder<List<Device>>(
+                    stream: deviceProvider.getDevicesStream(),
+                    builder: (context, snapshot) {
+                      final devices = snapshot.data ?? deviceProvider.devices;
 
-      body: deviceProvider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : deviceProvider.devices.isEmpty
-          ? _buildEmptyState()
-          : StreamBuilder<List<Device>>(
-              stream: deviceProvider.getDevicesStream(),
-              builder: (context, snapshot) {
-                final devices = snapshot.data ?? deviceProvider.devices;
+                      return ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          ...devices.map(
+                            (device) => DeviceCard(device: device),
+                          ),
 
-                return ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    ...devices.map((device) => DeviceCard(device: device)),
+                          const SizedBox(height: 20),
 
-                    const SizedBox(height: 20),
-
-                    ElevatedButton.icon(
-                      onPressed: _showAddDeviceDialog,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Device'),
-                    ),
-                  ],
-                );
-              },
-            ),
+                          ElevatedButton.icon(
+                            onPressed: _showAddDeviceDialog,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Device'),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+        );
+      },
     );
   }
 

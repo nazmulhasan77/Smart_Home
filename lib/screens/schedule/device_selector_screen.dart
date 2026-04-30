@@ -8,7 +8,8 @@ class DeviceSelectorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userId = context.watch<AuthProvider>().currentUser?.uid ?? '';
+    final authProvider = context.watch<AuthProvider>();
+    final userId = authProvider.currentUser?.uid ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -16,47 +17,44 @@ class DeviceSelectorScreen extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
       ),
-      body: ChangeNotifierProvider(
-        create: (_) => DeviceProvider(userId: userId),
-        child: Consumer<DeviceProvider>(
-          builder: (context, deviceProvider, _) {
-            if (deviceProvider.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
+      body: Consumer<DeviceProvider?>(
+        builder: (context, deviceProvider, _) {
+          if (deviceProvider == null || deviceProvider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            if (deviceProvider.devices.isEmpty) {
-              return Center(
-                child: Text(
-                  'No devices available',
-                  style: Theme.of(context).textTheme.bodyMedium,
+          if (deviceProvider.devices.isEmpty) {
+            return Center(
+              child: Text(
+                'No devices available',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: deviceProvider.devices.length,
+            itemBuilder: (context, index) {
+              final device = deviceProvider.devices[index];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: const Icon(Icons.device_hub),
+                  title: Text(device.deviceName),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/add-schedule',
+                      arguments: {'device': device, 'userId': userId},
+                    );
+                  },
                 ),
               );
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: deviceProvider.devices.length,
-              itemBuilder: (context, index) {
-                final device = deviceProvider.devices[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: const Icon(Icons.device_hub),
-                    title: Text(device.deviceName),
-                    trailing: const Icon(Icons.arrow_forward_ios),
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/add-schedule',
-                        arguments: {'device': device, 'userId': userId},
-                      );
-                    },
-                  ),
-                );
-              },
-            );
-          },
-        ),
+            },
+          );
+        },
       ),
     );
   }
