@@ -1,0 +1,31 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        // Each user can only read/write their own data
+        ".read": "auth.uid === $uid",
+        ".write": "auth.uid === $uid",
+        
+        "devices": {
+          "$deviceId": {
+            ".read": "auth.uid === $uid",
+            ".write": "auth.uid === $uid",
+            "switches": {
+              "$switchId": {
+                ".read": "auth.uid === $uid",
+                ".write": "auth.uid === $uid"
+              }
+            }
+          }
+        },
+        
+        "schedules": {
+          "$scheduleId": {
+            ".read": "auth.uid === $uid",
+            ".write": "auth.uid === $uid"
+          }
+        }
+      }
+    }
+  }
+}
