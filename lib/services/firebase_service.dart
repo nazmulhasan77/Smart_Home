@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:smart_home/models/device_model.dart';
 import 'package:smart_home/models/schedule_model.dart';
 import 'package:uuid/uuid.dart';
@@ -17,6 +18,7 @@ class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseDatabase _database = FirebaseDatabase.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // ============ Authentication & User Services ============
 
@@ -30,29 +32,19 @@ class FirebaseService {
       final UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
 
-      // Update Firebase Auth display name
       await userCredential.user?.updateDisplayName(displayName);
       await userCredential.user?.reload();
 
-      // ✅ Store user profile in Cloud Firestore
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'uid': userCredential.user!.uid,
-        'email': email,
-        'displayName': displayName,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      // Store user profile in Firestore
+      await _createOrUpdateUserProfile(
+        uid: userCredential.user!.uid,
+        email: email,
+        displayName: displayName,
+        photoUrl: null,
+        isGoogleUser: false,
+      );
 
       return userCredential.user;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// Get user profile from Firestore
-  Future<Map<String, dynamic>?> getUserProfile(String uid) async {
-    try {
-      final doc = await _firestore.collection('users').doc(uid).get();
-      return doc.data();
     } catch (e) {
       rethrow;
     }
@@ -66,15 +58,113 @@ class FirebaseService {
     try {
       final UserCredential userCredential = await _auth
           .signInWithEmailAndPassword(email: email, password: password);
+
+      // Update last login
+      await _firestore
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .update({'lastLoginAt': FieldValue.serverTimestamp()});
+
       return userCredential.user;
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Sign out
+  /// Sign in with Google
+  Future<User?> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null; // User cancelled
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(credential);
+
+      final user = userCredential.user!;
+
+      // Create or update user profile in Firestore
+      await _createOrUpdateUserProfile(
+        uid: user.uid,
+        email: user.email ?? '',
+        displayName: user.displayName ?? googleUser.displayName ?? 'User',
+        photoUrl: user.photoURL ?? googleUser.photoUrl,
+        isGoogleUser: true,
+      );
+
+      return user;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Create or update user profile in Firestore
+  Future<void> _createOrUpdateUserProfile({
+    required String uid,
+    required String email,
+    required String displayName,
+    String? photoUrl,
+    required bool isGoogleUser,
+  }) async {
+    final docRef = _firestore.collection('users').doc(uid);
+    final doc = await docRef.get();
+
+    if (!doc.exists) {
+      // New user — create full profile
+      await docRef.set({
+        'uid': uid,
+        'email': email,
+        'displayName': displayName,
+        'photoUrl': photoUrl,
+        'isGoogleUser': isGoogleUser,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastLoginAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Existing user — update login time and photo
+      await docRef.update({
+        'lastLoginAt': FieldValue.serverTimestamp(),
+        if (photoUrl != null) 'photoUrl': photoUrl,
+        if (displayName.isNotEmpty) 'displayName': displayName,
+      });
+    }
+  }
+
+  /// Get user profile from Firestore
+  Future<Map<String, dynamic>?> getUserProfile(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      return doc.data();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Update user display name
+  Future<void> updateDisplayName(String uid, String displayName) async {
+    try {
+      await _auth.currentUser?.updateDisplayName(displayName);
+      await _firestore.collection('users').doc(uid).update({
+        'displayName': displayName,
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Sign out (handles both Google and email)
   Future<void> signOut() async {
     try {
+      if (await _googleSignIn.isSignedIn()) {
+        await _googleSignIn.signOut();
+      }
       await _auth.signOut();
     } catch (e) {
       rethrow;
@@ -183,9 +273,7 @@ class FirebaseService {
     required String deviceId,
   }) async {
     try {
-      // Delete device
       await _database.ref('users/$userId/devices/$deviceId').remove();
-      // Delete associated schedules
       await _database.ref('users/$userId/schedules').once().then((event) {
         final snapshot = event.snapshot;
         if (snapshot.exists) {

@@ -14,8 +14,8 @@ class DeviceSelectorScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Select Device'),
-        centerTitle: true,
-        elevation: 0,
+        backgroundColor: const Color(0xFF6C63FF),
+        foregroundColor: Colors.white,
       ),
       body: Consumer<DeviceProvider?>(
         builder: (context, deviceProvider, _) {
@@ -25,9 +25,32 @@ class DeviceSelectorScreen extends StatelessWidget {
 
           if (deviceProvider.devices.isEmpty) {
             return Center(
-              child: Text(
-                'No devices available',
-                style: Theme.of(context).textTheme.bodyMedium,
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.devices_rounded,
+                      size: 64,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'No devices available',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Add a device first to create a schedule',
+                      style: TextStyle(color: Colors.grey.shade500),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -40,9 +63,36 @@ class DeviceSelectorScreen extends StatelessWidget {
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  leading: const Icon(Icons.device_hub),
-                  title: Text(device.deviceName),
-                  trailing: const Icon(Icons.arrow_forward_ios),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6C63FF).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.router_rounded,
+                      color: Color(0xFF6C63FF),
+                    ),
+                  ),
+                  title: Text(
+                    device.deviceName,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    '${device.switches.length} switches',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                  ),
                   onTap: () {
                     Navigator.pushNamed(
                       context,
